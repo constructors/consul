@@ -97,6 +97,19 @@ class Legislation::ProcessesController < Legislation::BaseController
     @phase = :milestones
   end
 
+  def summary
+    @phase = :summary
+    @proposals = @process.proposals.where(selected: true)
+    @version = @process.draft_versions.where(status: "published").last
+    @annotations = @version&.annotations || Legislation::Annotation.none
+    @comments = Comment.where(commentable: @annotations, ancestry: nil).sort_by_supports
+
+    respond_to do |format|
+      format.html
+      format.xlsx { render xlsx: "summary", filename: "summary-#{Date.current}.xlsx" }
+    end
+  end
+
   def proposals
     set_process
     @phase = :proposals_phase
