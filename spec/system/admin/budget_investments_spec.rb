@@ -1,6 +1,6 @@
 require "rails_helper"
 
-describe "Admin budget investments" do
+describe "Admin budget investments", :admin do
   let(:budget) { create(:budget) }
   let(:administrator) do
     create(:administrator, user: create(:user, username: "Ana", email: "ana@admins.org"))
@@ -9,10 +9,6 @@ describe "Admin budget investments" do
   it_behaves_like "admin_milestoneable",
                   :budget_investment,
                   "admin_polymorphic_path"
-
-  before do
-    login_as(create(:administrator).user)
-  end
 
   context "Feature flag" do
     before do
@@ -160,7 +156,8 @@ describe "Admin budget investments" do
       user = create(:user, username: "Admin 1")
       user2 = create(:user, username: "Admin 2")
       administrator = create(:administrator, user: user)
-      create(:administrator, user: user2, description: "Alias")
+      administrator2 = create(:administrator, user: user2, description: "Alias")
+      budget.administrators = [administrator, administrator2]
       create(:budget_investment, title: "Realocate visitors", budget: budget,
                                                               administrator: administrator)
       create(:budget_investment, title: "Destroy the city", budget: budget)
@@ -201,6 +198,7 @@ describe "Admin budget investments" do
     scenario "Filtering by valuator", :js do
       user = create(:user)
       valuator = create(:valuator, user: user, description: "Valuator 1")
+      budget.valuators = [valuator]
 
       create(:budget_investment, title: "Realocate visitors", budget: budget, valuators: [valuator])
       create(:budget_investment, title: "Destroy the city", budget: budget)
@@ -645,6 +643,7 @@ describe "Admin budget investments" do
     scenario "Combination of checkbox with text search", :js do
       user = create(:user, username: "Admin 1")
       administrator = create(:administrator, user: user)
+      budget.administrators = [administrator]
 
       create(:budget_investment, budget: budget, title: "Educate the children",
                                  administrator: administrator)
@@ -716,6 +715,7 @@ describe "Admin budget investments" do
     scenario "Combination of checkbox with text search and checkbox", :js do
       user = create(:user, username: "Admin 1")
       administrator = create(:administrator, user: user)
+      budget.administrators = [administrator]
 
       create(:budget_investment, :feasible, :finished, budget: budget, title: "Educate the children",
                                  administrator: administrator)
@@ -1647,6 +1647,28 @@ describe "Admin budget investments" do
       end
     end
 
+    scenario "Cannot mark/unmark visible to valuators on finished budgets" do
+      budget.update!(phase: "finished")
+      create(:budget_investment, budget: budget, title: "Visible", visible_to_valuators: true)
+      create(:budget_investment, budget: budget, title: "Invisible", visible_to_valuators: false)
+
+      visit admin_budget_budget_investments_path(budget)
+
+      within "tr", text: "Visible" do
+        within "td[data-field=visible_to_valuators]" do
+          expect(page).to have_text "Yes"
+          expect(page).not_to have_field "budget_investment_visible_to_valuators"
+        end
+      end
+
+      within "tr", text: "Invisible" do
+        within "td[data-field=visible_to_valuators]" do
+          expect(page).to have_text "No"
+          expect(page).not_to have_field "budget_investment_visible_to_valuators"
+        end
+      end
+    end
+
     scenario "Showing the valuating checkbox" do
       investment1 = create(:budget_investment, :with_administrator, :with_valuator, :visible_to_valuators,
                            budget: budget)
@@ -1875,6 +1897,28 @@ describe "Admin budget investments" do
 
         expect(page).to have_link "Select"
         expect(page).not_to have_content "Don't display me, please!"
+      end
+    end
+
+    scenario "When restoring the page from browser history renders columns selectors only once", :js do
+      visit admin_budget_budget_investments_path(budget)
+
+      click_link "Proposals"
+
+      expect(page).to have_content("There are no proposals.")
+
+      go_back
+
+      within("#js-columns-selector") do
+        find("strong", text: "Columns").click
+      end
+
+      within("#js-columns-selector-wrapper") do
+        selectable_columns.each do |column|
+          check_text = I18n.t("admin.budget_investments.index.list.#{column}")
+
+          expect(page).to have_content(check_text, count: 1)
+        end
       end
     end
   end

@@ -1,11 +1,6 @@
 require "rails_helper"
 
-describe "Admin budgets" do
-  before do
-    admin = create(:administrator)
-    login_as(admin.user)
-  end
-
+describe "Admin budgets", :admin do
   context "Feature flag" do
     before do
       Setting["process.budgets"] = nil
@@ -102,7 +97,7 @@ describe "Admin budgets" do
   end
 
   context "New" do
-    scenario "Create budget" do
+    scenario "Create budget - Knapsack voting (default)" do
       visit admin_budgets_path
       click_link "Create new budget"
 
@@ -113,6 +108,21 @@ describe "Admin budgets" do
 
       expect(page).to have_content "New participatory budget created successfully!"
       expect(page).to have_content "M30 - Summer campaign"
+      expect(Budget.last.voting_style).to eq "knapsack"
+    end
+
+    scenario "Create budget - Approval voting", :js do
+      visit admin_budgets_path
+      click_link "Create new budget"
+
+      fill_in "Name", with: "M30 - Summer campaign"
+      select "Accepting projects", from: "budget[phase]"
+      select "Approval", from: "Final voting style"
+      click_button "Create Budget"
+
+      expect(page).to have_content "New participatory budget created successfully!"
+      expect(page).to have_content "M30 - Summer campaign"
+      expect(Budget.last.voting_style).to eq "approval"
     end
 
     scenario "Name is mandatory" do

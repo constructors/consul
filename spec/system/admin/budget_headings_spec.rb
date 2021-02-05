@@ -1,13 +1,8 @@
 require "rails_helper"
 
-describe "Admin budget headings" do
+describe "Admin budget headings", :admin do
   let(:budget) { create(:budget, :drafting) }
   let(:group) { create(:budget_group, budget: budget) }
-
-  before do
-    admin = create(:administrator)
-    login_as(admin.user)
-  end
 
   context "Feature flag" do
     before do
@@ -148,7 +143,7 @@ describe "Admin budget headings" do
       click_button "Create new heading"
 
       expect(page).to have_content "Heading created successfully!"
-      expect(page).to have_link "All City"
+      expect(page).to have_content "All City"
       expect(page).to have_content "€1,000"
       expect(page).to have_content "10000"
       expect(page).to have_content "Yes"
@@ -170,6 +165,30 @@ describe "Admin budget headings" do
       expect(page).not_to have_content "Heading created successfully!"
       expect(page).to have_css(".is-invalid-label", text: "Amount")
       expect(page).to have_content "can't be blank"
+    end
+
+    describe "Max votes is optional", :js do
+      scenario "do no show max_ballot_lines field for knapsack budgets" do
+        visit new_admin_budget_group_heading_path(budget, group)
+
+        expect(page).not_to have_field "Votes allowed"
+      end
+
+      scenario "create heading with max_ballot_lines for appoval budgets" do
+        budget.update!(voting_style: "approval")
+
+        visit new_admin_budget_group_heading_path(budget, group)
+
+        expect(page).to have_field "Votes allowed", with: 1
+
+        fill_in "Heading name", with: "All City"
+        fill_in "Amount", with: "1000"
+        fill_in "Votes allowed", with: 14
+        click_button "Create new heading"
+
+        expect(page).to have_content "Heading created successfully!"
+        within("tr", text: "All City") { expect(page).to have_content 14 }
+      end
     end
   end
 

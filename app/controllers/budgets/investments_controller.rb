@@ -12,7 +12,7 @@ module Budgets
     before_action :authenticate_user!, except: [:index, :show, :json_data]
     before_action :load_budget, except: :json_data
 
-    load_and_authorize_resource :budget, except: :json_data
+    authorize_resource :budget, except: :json_data
     load_and_authorize_resource :investment, through: :budget, class: "Budget::Investment",
                                 except: :json_data
 
@@ -132,8 +132,8 @@ module Budgets
       end
 
       def investment_params
-        attributes = [:heading_id, :tag_list,
-                      :organization_name, :location, :terms_of_service, :skip_map,
+        attributes = [:heading_id, :tag_list, :organization_name, :location,
+                      :terms_of_service, :skip_map, :related_sdg_list,
                       image_attributes: image_attributes,
                       documents_attributes: [:id, :title, :attachment, :cached_attachment, :user_id, :_destroy],
                       map_location_attributes: [:latitude, :longitude, :zoom]]
@@ -148,7 +148,7 @@ module Budgets
       def load_heading
         if params[:heading_id].present?
           @heading = @budget.headings.find_by_slug_or_id! params[:heading_id]
-          @assigned_heading = @ballot&.heading_for_group(@heading&.group)
+          @assigned_heading = @ballot&.heading_for_group(@heading.group)
           load_map
         end
       end

@@ -254,7 +254,7 @@ describe "Commenting debates" do
       expect(page).to have_content "It will be done next week."
     end
 
-    expect(page).not_to have_selector("#js-comment-form-comment_#{comment.id}", visible: true)
+    expect(page).not_to have_selector("#js-comment-form-comment_#{comment.id}")
   end
 
   scenario "Reply to reply", :js do
@@ -360,11 +360,9 @@ describe "Commenting debates" do
     fill_in "Leave your comment", with: "Testing submit button!"
     click_button "Publish comment"
 
-    # The button"s text should now be "..."
-    # This should be checked before the Ajax request is finished
-    expect(page).not_to have_button "Publish comment"
-
-    expect(page).to have_content("Testing submit button!")
+    expect(page).to have_button "Publish comment", disabled: true
+    expect(page).to have_content "Testing submit button!"
+    expect(page).to have_button "Publish comment", disabled: false
   end
 
   describe "Moderators" do
@@ -410,7 +408,7 @@ describe "Commenting debates" do
         expect(page).to have_css "img.moderator-avatar"
       end
 
-      expect(page).not_to have_selector("#js-comment-form-comment_#{comment.id}", visible: true)
+      expect(page).not_to have_selector("#js-comment-form-comment_#{comment.id}")
     end
 
     scenario "can not comment as an administrator" do
@@ -466,13 +464,10 @@ describe "Commenting debates" do
         expect(page).to have_css "img.admin-avatar"
       end
 
-      expect(page).not_to have_selector("#js-comment-form-comment_#{comment.id}", visible: true)
+      expect(page).not_to have_selector("#js-comment-form-comment_#{comment.id}")
     end
 
-    scenario "can not comment as a moderator" do
-      admin = create(:administrator)
-
-      login_as(admin.user)
+    scenario "can not comment as a moderator", :admin do
       visit debate_path(debate)
 
       expect(page).not_to have_content "Comment as moderator"

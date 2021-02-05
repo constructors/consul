@@ -16,7 +16,12 @@
     <div class="small-12 medium-6 column">
       <%= f.select :phase, budget_phases_select_options %>
     </div>
-    <div class="small-12 medium-3 column end">
+
+    <div class="small-12 medium-4 column">
+      <%= f.select :voting_style, budget_voting_styles_select_options %>
+    </div>
+
+    <div class="small-12 medium-2 column end">
       <%= f.select :currency_symbol, budget_currency_symbol_select_options %>
     </div>
   </div>
@@ -71,9 +76,10 @@
                 <span class="budget-phase-enabled <%= phase.enabled? ? "enabled" : "disabled" %>"></span>
               </td>
               <td>
-                <%= link_to t("admin.budgets.edit.edit_phase"),
-                            edit_admin_budget_budget_phase_path(@budget, phase),
-                            class: "button hollow expanded" %>
+                <%= render Admin::TableActionsComponent.new(phase,
+                  actions: [:edit],
+                  edit_text: t("admin.budgets.edit.edit_phase")
+                ) %>
               </td>
             </tr>
           <% end %>

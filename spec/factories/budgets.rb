@@ -55,6 +55,14 @@ FactoryBot.define do
       results_enabled { true }
       stats_enabled { true }
     end
+
+    trait :knapsack do
+      voting_style { "knapsack" }
+    end
+
+    trait :approval do
+      voting_style { "approval" }
+    end
   end
 
   factory :budget_group, class: "Budget::Group" do
@@ -255,7 +263,7 @@ FactoryBot.define do
     reason { "unfeasible" }
   end
 
-  factory :valuator_group, class: ValuatorGroup do
+  factory :valuator_group, class: "ValuatorGroup" do
     sequence(:name) { |n| "Valuator Group #{n}" }
   end
 

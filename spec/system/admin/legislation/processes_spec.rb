@@ -1,11 +1,6 @@
 require "rails_helper"
 
-describe "Admin collaborative legislation" do
-  before do
-    admin = create(:administrator)
-    login_as(admin.user)
-  end
-
+describe "Admin collaborative legislation", :admin do
   it_behaves_like "admin_milestoneable",
                   :legislation_process,
                   "admin_legislation_process_milestones_path"
@@ -162,8 +157,8 @@ describe "Admin collaborative legislation" do
       fill_in "Summary", with: "Summary of the process"
 
       base_date = Date.current
-      fill_in "legislation_process[start_date]", with: base_date.strftime("%d/%m/%Y")
-      fill_in "legislation_process[end_date]", with: (base_date + 5.days).strftime("%d/%m/%Y")
+      fill_in "legislation_process[start_date]", with: base_date
+      fill_in "legislation_process[end_date]", with: base_date + 5.days
       imageable_attach_new_file(create(:image), Rails.root.join("spec/fixtures/files/clippy.jpg"))
 
       click_button "Create process"
@@ -201,7 +196,7 @@ describe "Admin collaborative legislation" do
         click_link "Collaborative Legislation"
       end
 
-      click_link "An example legislation process"
+      within("tr", text: "An example legislation process") { click_link "Edit" }
 
       expect(page).to have_selector("h2", text: "An example legislation process")
       expect(find("#legislation_process_debate_phase_enabled")).to be_checked
@@ -224,7 +219,7 @@ describe "Admin collaborative legislation" do
         click_link "Collaborative Legislation"
       end
 
-      click_link "An example legislation process"
+      within("tr", text: "An example legislation process") { click_link "Edit" }
 
       expect(find("#legislation_process_draft_publication_enabled")).to be_checked
 
@@ -238,6 +233,44 @@ describe "Admin collaborative legislation" do
       click_link "Click to visit"
 
       expect(page).not_to have_content "Draft publication"
+    end
+
+    scenario "Enabling/disabling a phase enables/disables its date fields", :js do
+      process.update!(published: false)
+
+      visit edit_admin_legislation_process_path(process)
+
+      expect(page).to have_field "start_date", disabled: true
+      expect(page).to have_field "end_date", disabled: true
+
+      check "legislation_process[published]"
+      fill_in "start_date", with: "07/07/2007"
+      fill_in "end_date", with: "08/08/2008"
+      uncheck "legislation_process[published]"
+
+      expect(page).to have_field "start_date", disabled: true
+      expect(page).to have_field "end_date", disabled: true
+
+      check "legislation_process[published]"
+
+      expect(page).to have_field "start_date", disabled: false, with: "2007-07-07"
+      expect(page).to have_field "end_date", disabled: false, with: "2008-08-08"
+    end
+
+    scenario "Enabling/disabling a phase does not enable/disable another phase date fields", :js do
+      process.update!(draft_phase_enabled: false, draft_publication_enabled: false)
+
+      visit edit_admin_legislation_process_path(process)
+
+      expect(page).to have_field "draft_start_date", disabled: true
+      expect(page).to have_field "draft_end_date", disabled: true
+      expect(page).to have_field "draft_publication_date", disabled: true
+
+      check "legislation_process[draft_phase_enabled]"
+
+      expect(page).to have_field "draft_start_date", disabled: false
+      expect(page).to have_field "draft_end_date", disabled: false
+      expect(page).to have_field "draft_publication_date", disabled: true
     end
 
     scenario "Change proposal categories" do
@@ -295,6 +328,44 @@ describe "Admin collaborative legislation" do
 
       expect(page).not_to have_css "#add_language"
       expect(page).not_to have_link "Remove language"
+    end
+  end
+
+  context "SDG related list" do
+    before do
+      Setting["feature.sdg"] = true
+      Setting["sdg.process.legislation"] = true
+    end
+
+    scenario "create Collaborative Legislation with sdg related list", :js do
+      visit new_admin_legislation_process_path
+      fill_in "Process Title", with: "Legislation process with SDG related content"
+      within_fieldset "Process" do
+        fill_in "Start", with: 2.days.ago
+        fill_in "End", with: 1.day.from_now
+      end
+
+      click_sdg_goal(17)
+      click_button "Create process"
+      visit admin_legislation_processes_path
+
+      within("tr", text: "Legislation process with SDG related content") do
+        expect(page).to have_css "td", exact_text: "17"
+      end
+    end
+
+    scenario "edit Collaborative Legislation with sdg related list", :js do
+      process = create(:legislation_process, title: "Legislation process with SDG related content")
+      process.sdg_goals = [SDG::Goal[1], SDG::Goal[17]]
+      visit edit_admin_legislation_process_path(process)
+
+      remove_sdg_goal_or_target_tag(1)
+      click_button "Save changes"
+      visit admin_legislation_processes_path
+
+      within("tr", text: "Legislation process with SDG related content") do
+        expect(page).to have_css "td", exact_text: "17"
+      end
     end
   end
 end

@@ -217,6 +217,7 @@ describe Budget do
       budget.phase = "reviewing"
       expect(budget.investments_orders).to eq(["random"])
     end
+
     it "is random and price when ballotting and reviewing ballots" do
       budget.phase = "publishing_prices"
       expect(budget.investments_orders).to eq(["random", "price"])
@@ -225,6 +226,7 @@ describe Budget do
       budget.phase = "reviewing_ballots"
       expect(budget.investments_orders).to eq(["random", "price"])
     end
+
     it "is random and confidence_score in all other cases" do
       budget.phase = "selecting"
       expect(budget.investments_orders).to eq(["random", "confidence_score"])
@@ -353,6 +355,27 @@ describe Budget do
       budget.investments << investment3
 
       expect(budget.investments_milestone_tags).to eq(["tag1"])
+    end
+  end
+
+  describe "#voting_style" do
+    context "Validations" do
+      it { expect(build(:budget, :approval)).to be_valid }
+      it { expect(build(:budget, :knapsack)).to be_valid }
+      it { expect(build(:budget, voting_style: "Oups!")).not_to be_valid }
+    end
+
+    context "Related supportive methods" do
+      describe "#approval_voting?" do
+        it { expect(build(:budget, :approval).approval_voting?).to be true }
+        it { expect(build(:budget, :knapsack).approval_voting?).to be false }
+      end
+    end
+
+    context "Defaults" do
+      it "defaults to knapsack voting style" do
+        expect(build(:budget).voting_style).to eq "knapsack"
+      end
     end
   end
 end
